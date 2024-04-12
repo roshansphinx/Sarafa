@@ -235,8 +235,14 @@ const PlaceOrder = ({ navigation }) => {
       setGallery(images);
       console.log('Gallery: ', images);
       setModalVisible(false);
+
       if (Array.isArray(images) && images.length > 0) {
-        setSelectedGallery(images.map(img => ({ uri: img.path })));
+        for (var i in images) {
+          selectedGallery.push({ uri: images[i].path })
+        }
+
+        setSelectedGallery([...selectedGallery])
+        // setSelectedGallery(images.map(img => ({ uri: img.path })));
       }
     } catch (error) {
       console.error('Failed to open gallery:', error);
@@ -245,9 +251,10 @@ const PlaceOrder = ({ navigation }) => {
 
   // Function to open the photo editor
   const editImage = async (imagePath, index) => {
+    console.log("fd", index)
     try {
       // Move the image to the photo editing directory
-      const photoEditingPath = RNFS.DocumentDirectoryPath + '/editedPhoto.jpg';
+      const photoEditingPath = RNFS.DocumentDirectoryPath + `/editedPhoto_${index}.jpg`;
       await RNFS.moveFile(imagePath, photoEditingPath);
       console.log(photoEditingPath);
 
@@ -255,9 +262,16 @@ const PlaceOrder = ({ navigation }) => {
       PhotoEditor.Edit({
         path: photoEditingPath,
         onDone: editedImagePath => {
-          console.log('on done');
+          console.log('on done', 'file:///data/data/com.webkindproject/files/editedPhoto.jpg');
+          // for (var i in selectedGallery) {
+          //   if (i == index) {
+          //     selectedGallery[i].uri = `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg`
+          //   }
+          // }
+          selectedGallery.splice(index, 1, { uri: `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg` })
+          setSelectedGallery([...selectedGallery])
           // Handle saving the edited photo here
-          editImage(editedImagePath);
+          // editImage(editedImagePath);
         },
         onCancel: () => {
           console.log('on cancel');
@@ -308,6 +322,7 @@ const PlaceOrder = ({ navigation }) => {
     setPlayButtonVisible(false);
   };
 
+  console.log("Data", selectedGallery)
   return (
     <View style={Styles.container}>
       {/* header */}
