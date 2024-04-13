@@ -89,9 +89,17 @@ const PlaceOrder = ({ navigation }) => {
       const formData = new FormData();
 
       // Append gallery from Gallery
-      if (Array.isArray(gallery) && gallery.length > 0) {
-        gallery.forEach((selectedImage, index) => {
-          if (selectedImage && selectedImage.data && selectedImage.mime) {
+      console.log("gallery", selectedGallery)
+      if (Array.isArray(selectedGallery) && selectedGallery.length > 0) {
+        selectedGallery.forEach((selectedImage, index) => {
+          // if (selectedImage && selectedImage.data && selectedImage.mime) {
+          var file = '';
+          if (selectedImage.path) {
+            file = selectedImage.path
+          } else {
+            file = selectedImage.uri
+          }
+          if (selectedImage) {
             const imgGallery = {
               name:
                 new Date() + `image${index + 1}.png` ||
@@ -100,9 +108,10 @@ const PlaceOrder = ({ navigation }) => {
               type: 'image/png' || 'image/jpeg' || 'image/jpg',
               uri:
                 Platform.OS === 'android'
-                  ? selectedImage.path
-                  : selectedImage.path.replace('file://', ''),
+                  ? file
+                  : file.replace('file://', ''),
             };
+            console.log("fd", imgGallery)
             formData.append('galleryImage', imgGallery);
           } else {
             console.error(
@@ -173,10 +182,12 @@ const PlaceOrder = ({ navigation }) => {
         .catch(error => {
           console.error('Failed to upload error message:', error.message);
           console.error('Failed to upload error:', error);
+          Alert.alert('Catch', error.message);
           clearAllStates();
         });
     } catch (error) {
       console.log('Error sending  to server: ', error);
+      Alert.alert('Catch');
     }
   };
 
@@ -250,11 +261,15 @@ const PlaceOrder = ({ navigation }) => {
   };
 
   // Function to open the photo editor
-  const editImage = async (imagePath, index) => {
-    console.log("fd", index)
+  const editImage = async (imagePath, index, type) => {
     try {
       // Move the image to the photo editing directory
-      const photoEditingPath = RNFS.DocumentDirectoryPath + `/editedPhoto_${index}.jpg`;
+      if (type == 'GALLERY') {
+        var photoEditingPath = RNFS.DocumentDirectoryPath + `/editedPhoto_${index}.jpg`;
+      } else {
+        var photoEditingPath = RNFS.DocumentDirectoryPath + `/cameraPhoto_${index}.jpg`;
+      }
+
       await RNFS.moveFile(imagePath, photoEditingPath);
       console.log(photoEditingPath);
 
@@ -262,14 +277,15 @@ const PlaceOrder = ({ navigation }) => {
       PhotoEditor.Edit({
         path: photoEditingPath,
         onDone: editedImagePath => {
-          console.log('on done', 'file:///data/data/com.webkindproject/files/editedPhoto.jpg');
-          // for (var i in selectedGallery) {
-          //   if (i == index) {
-          //     selectedGallery[i].uri = `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg`
-          //   }
-          // }
-          selectedGallery.splice(index, 1, { uri: `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg` })
-          setSelectedGallery([...selectedGallery])
+          console.log("editedImagePath", editedImagePath)
+          if (type == 'GALLERY') {
+            selectedGallery.splice(index, 1, { uri: `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg`, path: `file:///data/data/com.webkindproject/files/editedPhoto_${index}.jpg` })
+            setSelectedGallery([...selectedGallery])
+          } else {
+            camera.splice(index, 1, { path: `file:///data/data/com.webkindproject/files/cameraPhoto_${index}.jpg` })
+            setCamera([...camera])
+          }
+
           // Handle saving the edited photo here
           // editImage(editedImagePath);
         },
@@ -322,7 +338,6 @@ const PlaceOrder = ({ navigation }) => {
     setPlayButtonVisible(false);
   };
 
-  console.log("Data", selectedGallery)
   return (
     <View style={Styles.container}>
       {/* header */}
@@ -342,13 +357,13 @@ const PlaceOrder = ({ navigation }) => {
           <ScrollView horizontal={true}>
             {selectedGallery.map((img, index) => (
               <View key={index}>
-                <TouchableOpacity onPress={() => editImage(img.uri, index)}>
+                <TouchableOpacity onPress={() => editImage(img.uri, index, 'GALLERY')}>
                   <Image source={img} style={{ width: 100, height: 100 }} />
                 </TouchableOpacity>
               </View>
             ))}
             {camera.map((photo, index) => (
-              <TouchableOpacity onPress={() => editImage(photo.path, index)}>
+              <TouchableOpacity onPress={() => editImage(photo.path, index, 'CAMERA')}>
                 <Image
                   key={index}
                   source={{ uri: photo.path }}
